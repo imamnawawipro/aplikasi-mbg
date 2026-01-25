@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Camera, Save, Loader2, Edit2, Image as ImageIcon } from 'lucide-react';
+import { Camera, Save, Loader2, Edit2, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 // import { cn } from '../lib/utils';
 
@@ -58,6 +58,39 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
         setLoading(false);
     }
 
+    async function deletePhoto() {
+        if (!currentPath || !confirm('Yakin ingin menghapus foto menu ini?')) return;
+
+        setLoading(true);
+        try {
+            // 1. Remove from Storage
+            const { error: storageError } = await supabase.storage
+                .from('meal-photos')
+                .remove([currentPath]);
+
+            if (storageError) console.error('Storage delete error:', storageError);
+            // Continue anyway to clear DB reference
+
+            // 2. Clear path in DB
+            const { error } = await supabase.from('daily_menus').upsert({
+                date: formattedDate,
+                photo_path: null,
+                menu_items: menuItems // Preserve menu text
+            }, { onConflict: 'date' });
+
+            if (error) throw error;
+
+            setPhotoUrl(null);
+            setCurrentPath(null);
+            alert('Foto berhasil dihapus.');
+        } catch (err: any) {
+            console.error('Delete failed:', err);
+            alert('Gagal menghapus foto.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -112,15 +145,29 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                         className="w-full text-sm p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px]"
                     />
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                            className="text-sm flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
-                        >
-                            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                            {photoUrl ? 'Ganti Foto' : 'Ambil/Upload Foto'}
-                        </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="text-sm flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
+                            >
+                                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                                {photoUrl ? 'Ganti Foto' : 'Ambil/Upload Foto'}
+                            </button>
+
+                            {photoUrl && (
+                                <button
+                                    onClick={deletePhoto}
+                                    disabled={loading}
+                                    className="text-sm flex items-center justify-center px-3 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                                    title="Hapus Foto"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -132,20 +179,22 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
 
                         <div className="flex-1"></div>
 
-                        <button
-                            onClick={() => setIsEditing(false)}
-                            className="text-sm px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-lg"
-                        >
-                            Batal
-                        </button>
-                        <button
-                            onClick={() => saveAll()}
-                            disabled={loading}
-                            className="text-sm flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Simpan
-                        </button>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="text-sm px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={() => saveAll()}
+                                disabled={loading}
+                                className="text-sm flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                            >
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Simpan
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (
