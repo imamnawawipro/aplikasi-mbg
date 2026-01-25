@@ -16,6 +16,8 @@ import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
 export function DashboardView() {
+    const [stats, setStats] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [endDate, setEndDate] = useState(new Date());
 
     // Calculate start date based on end date (7 days window)
@@ -30,6 +32,11 @@ export function DashboardView() {
     const handlePrevWeek = () => setEndDate(d => subDays(d, 7));
     const handleNextWeek = () => setEndDate(d => addDays(d, 7));
     const handleToday = () => setEndDate(new Date());
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.value) {
+            setEndDate(new Date(e.target.value));
+        }
+    };
     const isCurrentWeek = format(endDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
     async function fetchStats(dateRange: Date[]) {
@@ -91,12 +98,21 @@ export function DashboardView() {
                     <ChevronLeft className="w-5 h-5" />
                 </button>
 
-                <div className="text-center">
+                <div className="text-center relative group">
                     <p className="text-sm font-medium text-gray-500">Periode Laporan</p>
-                    <p className="text-base font-bold text-gray-800 flex items-center gap-2 justify-center">
+                    <label className="text-base font-bold text-gray-800 flex items-center gap-2 justify-center cursor-pointer hover:text-blue-600 transition-colors">
                         <Calendar className="w-4 h-4 text-blue-500" />
                         {dateRangeStr}
-                    </p>
+                        <input
+                            type="date"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            value={format(endDate, 'yyyy-MM-dd')}
+                            onChange={handleDateChange}
+                        />
+                    </label>
+                    <span className="text-[10px] text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                        Klik tanggal untuk ubah
+                    </span>
                 </div>
 
                 <div className="flex gap-2">
