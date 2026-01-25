@@ -31,7 +31,7 @@ export function DashboardView() {
 
     const handlePrevWeek = () => setEndDate(d => subDays(d, 7));
     const handleNextWeek = () => setEndDate(d => addDays(d, 7));
-    const handleToday = () => setEndDate(new Date());
+    // const handleToday = () => setEndDate(new Date()); // Removed unused function
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.value) {
             setEndDate(new Date(e.target.value));
