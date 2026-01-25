@@ -37,6 +37,22 @@ export function DashboardView() {
             setEndDate(new Date(e.target.value));
         }
     };
+
+    // Presets Logic
+    const setPreset = (days: number) => {
+        setEndDate(new Date()); // Reset to today as base? Or just end date? 
+        // Logic: End date is today, Start date is today - days. But my logic uses endDate - 6.
+        // Let's adjust logic. The user wants "Last Week".
+        // If I click "Minggu Lalu", EndDate should be Last Sunday?
+        // Let's keep it simple: "Last 7 Days" vs "Previous 7 Days window".
+
+        // Preset: Minggu Ini (Today back to -6)
+        if (days === 0) setEndDate(new Date());
+
+        // Preset: Minggu Lalu (Today - 7)
+        if (days === 7) setEndDate(subDays(new Date(), 7));
+    };
+
     const isCurrentWeek = format(endDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
     async function fetchStats(dateRange: Date[]) {
@@ -116,14 +132,30 @@ export function DashboardView() {
                 </div>
 
                 <div className="flex gap-2">
-                    {!isCurrentWeek && (
+                    <div className="hidden sm:flex gap-1 mr-2">
                         <button
-                            onClick={handleToday}
-                            className="hidden sm:flex px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 transition-colors"
+                            onClick={() => setPreset(7)}
+                            className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            Minggu Lalu
+                        </button>
+                        <button
+                            onClick={() => setPreset(0)}
+                            className={cn(
+                                "px-3 py-1 text-xs font-bold rounded-lg transition-colors",
+                                isCurrentWeek ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            )}
                         >
                             Minggu Ini
                         </button>
-                    )}
+                    </div>
+
+                    <button
+                        onClick={handlePrevWeek}
+                        className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
+                    </button>
                     <button
                         onClick={handleNextWeek}
                         disabled={isCurrentWeek} // Optional: Disable future if needed, but maybe user wants to see planned menus? Statistics implies past/current.
