@@ -288,11 +288,11 @@ export function StudentList({ selectedDate }: StudentListProps) {
                 </div>
             </div>
 
-            {/* Bulk Actions Bar */}
-            {filteredStudents.length > 0 && (
+            {/* Bulk Actions Bar - Only visible when specific class is selected */}
+            {selectedClass !== 'all' && filteredStudents.length > 0 && (
                 <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-2">
                     <span className="text-xs text-blue-600 font-medium">
-                        Menampilkan {filteredStudents.length} Siswa
+                        Menampilkan {filteredStudents.length} Siswa (Kelas {selectedClass})
                     </span>
 
                     <div className="flex gap-2">
@@ -315,6 +315,15 @@ export function StudentList({ selectedDate }: StudentListProps) {
                             Reset
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* Hint when All Class is selected */}
+            {selectedClass === 'all' && students.length > 0 && (
+                <div className="mb-4 px-2">
+                    <p className="text-xs text-gray-400 italic text-center">
+                        *Pilih Kelas spesifik untuk menggunakan fitur Ceklis Massal.
+                    </p>
                 </div>
             )}
 
