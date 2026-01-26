@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Loader2, Check, AlertCircle, UserPlus, Upload, Search, Filter } from 'lucide-react';
+import { Loader2, Check, AlertCircle, UserPlus, Upload, Search, Filter, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { AddStudentDialog } from './AddStudentDialog';
@@ -113,6 +113,44 @@ export function StudentList({ selectedDate }: StudentListProps) {
                 )
             );
             alert('Gagal menyimpan perubahan. Coba lagi.');
+        }
+    };
+
+    const toggleAll = async (targetStatus: boolean) => {
+        if (filteredStudents.length === 0) return;
+
+        const confirmMsg = targetStatus
+            ? `Tandai ${filteredStudents.length} siswa sebagai SUDAH terima?`
+            : `Tandai ${filteredStudents.length} siswa sebagai BELUM terima?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        setLoading(true);
+        // Optimistic Update
+        const affectedIds = filteredStudents.map(s => s.id);
+        setStudents(prev => prev.map(s =>
+            affectedIds.includes(s.id) ? { ...s, is_received: targetStatus } : s
+        ));
+
+        try {
+            const updates = filteredStudents.map(s => ({
+                student_id: s.id,
+                date: formattedDate,
+                is_received: targetStatus
+            }));
+
+            const { error } = await supabase
+                .from('mbg_logs')
+                .upsert(updates, { onConflict: 'student_id, date' });
+
+            if (error) throw error;
+
+        } catch (err) {
+            console.error('Batch update error:', err);
+            alert('Gagal update massal.');
+            fetchData(); // Revert by fetching fresh data
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -249,6 +287,36 @@ export function StudentList({ selectedDate }: StudentListProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Bulk Actions Bar */}
+            {filteredStudents.length > 0 && (
+                <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <span className="text-xs text-blue-600 font-medium">
+                        Menampilkan {filteredStudents.length} Siswa
+                    </span>
+
+                    <div className="flex gap-2">
+                        {/* Check All Button */}
+                        <button
+                            onClick={() => toggleAll(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-xs font-bold rounded-md hover:bg-blue-50 transition-colors shadow-sm"
+                        >
+                            <CheckSquare className="w-4 h-4" />
+                            Ceklis Semua
+                        </button>
+
+                        {/* Uncheck All (Optional, good UX to have) */}
+                        <button
+                            onClick={() => toggleAll(false)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+                            title="Reset Checklist"
+                        >
+                            <Square className="w-4 h-4" />
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {students.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-xl border-gray-200 bg-gray-50">
