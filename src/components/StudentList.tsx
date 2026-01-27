@@ -15,6 +15,7 @@ interface Student {
 
 interface StudentWithLog extends Student {
     is_received: boolean;
+    status: 'H' | 'S' | 'I' | 'A' | null;
     log_id?: string;
 }
 
@@ -64,9 +65,11 @@ export function StudentList({ selectedDate }: StudentListProps) {
             // 3. Merge data
             const mergedData = (studentsData || []).map((student) => {
                 const log = logsData?.find((l) => l.student_id === student.id);
+                // Default logic: if log exists, use its status. If not, null (belum absen).
                 return {
                     ...student,
                     is_received: log ? log.is_received : false,
+                    status: log ? (log.status as any) || (log.is_received ? 'H' : null) : null,
                     log_id: log?.id,
                 };
             });
@@ -80,63 +83,76 @@ export function StudentList({ selectedDate }: StudentListProps) {
         }
     }
 
-    const toggleStatus = async (student: StudentWithLog) => {
-        const newStatus = !student.is_received;
+    const updateStatus = async (student: StudentWithLog, newStatus: 'H' | 'S' | 'I' | 'A' | null) => {
+        // If clicking the same status, toggle it off (reset to null)
+        const effectiveStatus = student.status === newStatus ? null : newStatus;
+        const isReceived = effectiveStatus === 'H';
 
         // Optimistic Update
         setStudents((prev) =>
             prev.map((s) =>
-                s.id === student.id ? { ...s, is_received: newStatus } : s
+                s.id === student.id ? { ...s, status: effectiveStatus, is_received: isReceived } : s
             )
         );
 
         try {
-            const { error } = await supabase
-                .from('mbg_logs')
-                .upsert(
-                    {
-                        student_id: student.id,
-                        date: formattedDate,
-                        is_received: newStatus,
-                    },
-                    { onConflict: 'student_id, date' }
-                );
-
-            if (error) throw error;
+            if (effectiveStatus === null) {
+                // If unchecking, maybe delete the log or set to null?
+                // Let's delete the log to be clean, OR set status to null.
+                // Depending on requirement. Let's delete for "Reset".
+                const { error } = await supabase
+                    .from('mbg_logs')
+                    .delete()
+                    .eq('student_id', student.id)
+                    .eq('date', formattedDate);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('mbg_logs')
+                    .upsert(
+                        {
+                            student_id: student.id,
+                            date: formattedDate,
+                            is_received: isReceived,
+                            status: effectiveStatus
+                        },
+                        { onConflict: 'student_id, date' }
+                    );
+                if (error) throw error;
+            }
 
         } catch (err) {
             console.error('Error updating status:', err);
-            // Revert optimistic update on error
+            // Revert
             setStudents((prev) =>
                 prev.map((s) =>
-                    s.id === student.id ? { ...s, is_received: !newStatus } : s
+                    s.id === student.id ? { ...s, status: student.status, is_received: student.is_received } : s
                 )
             );
             alert('Gagal menyimpan perubahan. Coba lagi.');
         }
     };
 
-    const toggleAll = async (targetStatus: boolean) => {
+    const toggleAll = async (targetStatus: 'H') => {
         if (filteredStudents.length === 0) return;
 
-        const confirmMsg = targetStatus
-            ? `Tandai ${filteredStudents.length} siswa sebagai SUDAH terima?`
-            : `Tandai ${filteredStudents.length} siswa sebagai BELUM terima?`;
-
+        const confirmMsg = `Tandai ${filteredStudents.length} siswa sebagai HADIR (H)?`;
         if (!confirm(confirmMsg)) return;
 
         setLoading(true);
-        // Optimistic Update
         const affectedIds = filteredStudents.map(s => s.id);
+
+        // Optimistic
         setStudents(prev => prev.map(s =>
-            affectedIds.includes(s.id) ? { ...s, is_received: targetStatus } : s
+            affectedIds.includes(s.id) ? { ...s, status: targetStatus, is_received: true } : s
         ));
 
         try {
             const updates = filteredStudents.map(s => ({
                 student_id: s.id,
                 date: formattedDate,
-                is_received: targetStatus
+                is_received: true,
+                status: targetStatus
             }));
 
             const { error } = await supabase
@@ -148,7 +164,7 @@ export function StudentList({ selectedDate }: StudentListProps) {
         } catch (err) {
             console.error('Batch update error:', err);
             alert('Gagal update massal.');
-            fetchData(); // Revert by fetching fresh data
+            fetchData();
         } finally {
             setLoading(false);
         }
@@ -179,11 +195,13 @@ export function StudentList({ selectedDate }: StudentListProps) {
     // Let's implement Global Day Stats (Visible all the time).
 
     const dailyStats = useMemo(() => {
-        const received = students.filter(s => s.is_received);
+        const hadirs = students.filter(s => s.status === 'H');
         return {
-            total: received.length,
-            L: received.filter(s => s.gender === 'L' || !s.gender).length,
-            P: received.filter(s => s.gender === 'P').length,
+            total: hadirs.length, // Total Hadir/Makan
+            H: hadirs.length,
+            S: students.filter(s => s.status === 'S').length,
+            I: students.filter(s => s.status === 'I').length,
+            A: students.filter(s => s.status === 'A').length,
             totalStudents: students.length
         };
     }, [students]);
@@ -218,18 +236,22 @@ export function StudentList({ selectedDate }: StudentListProps) {
                 {/* Top Controls: Stats & Add Buttons */}
                 <div className="flex flex-col gap-3">
                     {/* Stats Bar */}
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                        <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-center">
-                            <span className="block text-xs text-green-600 font-medium">Total Makan</span>
-                            <span className="text-xl font-bold text-green-700">{dailyStats.total}</span>
+                    <div className="grid grid-cols-4 gap-2 sm:gap-4">
+                        <div className="bg-green-50 border border-green-100 rounded-lg p-2 sm:p-3 text-center">
+                            <span className="block text-[10px] sm:text-xs text-green-600 font-medium uppercase">Hadir</span>
+                            <span className="text-lg sm:text-xl font-bold text-green-700">{dailyStats.H}</span>
                         </div>
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-center">
-                            <span className="block text-xs text-blue-600 font-medium">Laki-laki (L)</span>
-                            <span className="text-xl font-bold text-blue-700">{dailyStats.L}</span>
+                        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-2 sm:p-3 text-center">
+                            <span className="block text-[10px] sm:text-xs text-yellow-600 font-medium uppercase">Sakit</span>
+                            <span className="text-lg sm:text-xl font-bold text-yellow-700">{dailyStats.S}</span>
                         </div>
-                        <div className="bg-pink-50 border border-pink-100 rounded-lg p-3 text-center">
-                            <span className="block text-xs text-pink-600 font-medium">Perempuan (P)</span>
-                            <span className="text-xl font-bold text-pink-700">{dailyStats.P}</span>
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 sm:p-3 text-center">
+                            <span className="block text-[10px] sm:text-xs text-blue-600 font-medium uppercase">Izin</span>
+                            <span className="text-lg sm:text-xl font-bold text-blue-700">{dailyStats.I}</span>
+                        </div>
+                        <div className="bg-red-50 border border-red-100 rounded-lg p-2 sm:p-3 text-center">
+                            <span className="block text-[10px] sm:text-xs text-red-600 font-medium uppercase">Alfa</span>
+                            <span className="text-lg sm:text-xl font-bold text-red-700">{dailyStats.A}</span>
                         </div>
                     </div>
 
@@ -298,11 +320,11 @@ export function StudentList({ selectedDate }: StudentListProps) {
                     <div className="flex gap-2">
                         {/* Check All Button */}
                         <button
-                            onClick={() => toggleAll(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-xs font-bold rounded-md hover:bg-blue-50 transition-colors shadow-sm"
+                            onClick={() => toggleAll('H')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-bold rounded-md hover:bg-green-100 transition-colors shadow-sm"
                         >
                             <CheckSquare className="w-4 h-4" />
-                            Ceklis Semua
+                            Semua Hadir
                         </button>
 
                         {/* Uncheck All (Optional, good UX to have) */}
@@ -354,45 +376,63 @@ export function StudentList({ selectedDate }: StudentListProps) {
                     {filteredStudents.map((student) => (
                         <div
                             key={student.id}
-                            onClick={() => toggleStatus(student)}
                             className={cn(
-                                "group flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200",
-                                student.is_received
-                                    ? "bg-green-50 border-green-200 shadow-sm"
-                                    : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm"
+                                "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-3 bg-white rounded-xl border transition-all shadow-sm",
+                                student.status === 'H' ? "border-green-300 bg-green-50/30" :
+                                    student.status === 'S' ? "border-yellow-300 bg-yellow-50/30" :
+                                        student.status === 'I' ? "border-blue-300 bg-blue-50/30" :
+                                            student.status === 'A' ? "border-red-300 bg-red-50/30" :
+                                                "border-transparent hover:border-gray-200"
                             )}
                         >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-start gap-4 mb-3 sm:mb-0">
                                 <div className={cn(
                                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold min-w-[40px]",
                                     student.gender === 'P' ? "bg-pink-100 text-pink-600" : "bg-blue-100 text-blue-600"
                                 )}>
                                     {student.gender || 'L'}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className={cn(
-                                        "font-semibold text-lg transition-colors",
-                                        student.is_received ? "text-green-800" : "text-gray-900 group-hover:text-blue-700"
-                                    )}>
-                                        {student.name}
-                                    </span>
-                                    <span className="text-sm text-gray-500">
-                                        Kelas: {student.class}
-                                    </span>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">{student.name}</h3>
+                                    <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
+                                        <span>{student.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                                        {student.status && (
+                                            <span className="font-medium px-1.5 py-0.5 rounded bg-gray-100">
+                                                Status: {
+                                                    student.status === 'H' ? 'Hadir' :
+                                                        student.status === 'S' ? 'Sakit' :
+                                                            student.status === 'I' ? 'Izin' : 'Alfa'
+                                                }
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div
-                                className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300",
-                                    student.is_received
-                                        ? "bg-green-500 border-green-500 scale-110"
-                                        : "bg-transparent border-gray-300 group-hover:border-blue-400"
-                                )}
-                            >
-                                {student.is_received && (
-                                    <Check className="w-5 h-5 text-white" strokeWidth={3} />
-                                )}
+                            <div className="flex gap-1 sm:gap-2 self-end sm:self-auto">
+                                {[
+                                    { id: 'H', label: 'H', color: 'green', fullLabel: 'Hadir' },
+                                    { id: 'S', label: 'S', color: 'yellow', fullLabel: 'Sakit' },
+                                    { id: 'I', label: 'I', color: 'blue', fullLabel: 'Izin' },
+                                    { id: 'A', label: 'A', color: 'red', fullLabel: 'Alfa' },
+                                ].map((type) => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => updateStatus(student, type.id as any)}
+                                        className={cn(
+                                            "w-10 h-10 sm:w-11 sm:h-11 rounded-lg font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center shadow-sm",
+                                            student.status === type.id
+                                                ? type.color === 'green' ? "bg-green-500 border-green-600 text-white scale-105" :
+                                                    type.color === 'yellow' ? "bg-yellow-500 border-yellow-600 text-white scale-105" :
+                                                        type.color === 'blue' ? "bg-blue-500 border-blue-600 text-white scale-105" :
+                                                            "bg-red-500 border-red-600 text-white scale-105"
+                                                : "bg-white border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50"
+                                        )}
+                                        title={type.fullLabel}
+                                    >
+                                        {type.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     ))}

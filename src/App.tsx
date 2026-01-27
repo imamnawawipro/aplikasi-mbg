@@ -4,7 +4,7 @@ import { StudentList } from './components/StudentList';
 import { DailyMenuWidget } from './components/DailyMenuWidget';
 import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, CalendarDays, LogOut, Loader2 } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, CalendarDays, LogOut, Loader2, CheckSquare } from 'lucide-react';
 import { cn } from './lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -12,7 +12,7 @@ import { supabase } from './lib/supabase';
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<'input' | 'dashboard'>('input');
+  const [activeTab, setActiveTab] = useState<'menu' | 'attendance' | 'report'>('menu');
   const [scrolled, setScrolled] = useState(false);
 
   // Auth State
@@ -124,27 +124,34 @@ function App() {
       {/* Main Content */}
       <main className="max-w-md mx-auto px-4 space-y-6">
 
-        {/* Content Switcher */}
-        {activeTab === 'input' ? (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-
-            {/* Calendar Card */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-3 text-gray-600 font-medium text-sm">
-                <CalendarDays className="w-4 h-4 text-blue-500" />
-                Pilih Tanggal
-              </div>
-              <CalendarView
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
+        {/* Calendar - Visible for Menu and Attendance */}
+        {(activeTab === 'menu' || activeTab === 'attendance') && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-2 mb-3 text-gray-600 font-medium text-sm">
+              <CalendarDays className="w-4 h-4 text-blue-500" />
+              Pilih Tanggal
             </div>
+            <CalendarView
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+            />
+          </div>
+        )}
 
+        {/* Content Switcher */}
+        {activeTab === 'menu' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
             <DailyMenuWidget selectedDate={selectedDate} />
+          </div>
+        )}
 
+        {activeTab === 'attendance' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
             <StudentList selectedDate={selectedDate} />
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'report' && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <DashboardView />
           </div>
@@ -155,38 +162,59 @@ function App() {
       {/* Bottom Navigation Bar (Mobile Style) */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t pb-safe pt-2 px-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div className="max-w-md mx-auto flex items-center justify-around h-16">
+          {/* Tab 1: Menu Harian */}
           <button
-            onClick={() => setActiveTab('input')}
+            onClick={() => setActiveTab('menu')}
             className={cn(
               "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
-              activeTab === 'input'
+              activeTab === 'menu'
                 ? "text-blue-600 -translate-y-1"
                 : "text-gray-400 hover:text-gray-600"
             )}
           >
             <div className={cn(
               "p-2 rounded-xl transition-all",
-              activeTab === 'input' ? "bg-blue-50" : "bg-transparent"
+              activeTab === 'menu' ? "bg-blue-50" : "bg-transparent"
             )}>
-              <ClipboardList className={cn("w-6 h-6", activeTab === 'input' && "fill-blue-600/20")} />
+              <UtensilsCrossed className={cn("w-6 h-6", activeTab === 'menu' && "fill-blue-600/20")} />
             </div>
-            <span className="text-[10px] font-medium">Input Harian</span>
+            <span className="text-[10px] font-medium">Menu</span>
           </button>
 
+          {/* Tab 2: Kehadiran */}
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => setActiveTab('attendance')}
             className={cn(
               "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
-              activeTab === 'dashboard'
+              activeTab === 'attendance'
                 ? "text-blue-600 -translate-y-1"
                 : "text-gray-400 hover:text-gray-600"
             )}
           >
             <div className={cn(
               "p-2 rounded-xl transition-all",
-              activeTab === 'dashboard' ? "bg-blue-50" : "bg-transparent"
+              activeTab === 'attendance' ? "bg-blue-50" : "bg-transparent"
             )}>
-              <LayoutDashboard className={cn("w-6 h-6", activeTab === 'dashboard' && "fill-blue-600/20")} />
+              <CheckSquare className={cn("w-6 h-6", activeTab === 'attendance' && "fill-blue-600/20")} />
+            </div>
+            <span className="text-[10px] font-medium">Kehadiran</span>
+          </button>
+
+          {/* Tab 3: Laporan */}
+          <button
+            onClick={() => setActiveTab('report')}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
+              activeTab === 'report'
+                ? "text-blue-600 -translate-y-1"
+                : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            <div className={cn(
+              "p-2 rounded-xl transition-all",
+              activeTab === 'report' ? "bg-blue-50" : "bg-transparent"
+            )}>
+              <LayoutDashboard className={cn("w-6 h-6", activeTab === 'report' && "fill-blue-600/20")} />
             </div>
             <span className="text-[10px] font-medium">Laporan</span>
           </button>
