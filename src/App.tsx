@@ -4,7 +4,7 @@ import { StudentList } from './components/StudentList';
 import { DailyMenuWidget } from './components/DailyMenuWidget';
 import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, CalendarDays, LogOut, Loader2, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Utensils, CalendarDays, LogOut, Loader2, ClipboardCheck } from 'lucide-react';
 import { cn } from './lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -176,7 +176,7 @@ function App() {
               "p-2 rounded-xl transition-all",
               activeTab === 'menu' ? "bg-blue-50" : "bg-transparent"
             )}>
-              <UtensilsCrossed className={cn("w-6 h-6", activeTab === 'menu' && "fill-blue-600/20")} />
+              <Utensils className={cn("w-6 h-6", activeTab === 'menu' && "fill-blue-600/20")} />
             </div>
             <span className="text-[10px] font-medium">Menu</span>
           </button>
@@ -195,7 +195,7 @@ function App() {
               "p-2 rounded-xl transition-all",
               activeTab === 'attendance' ? "bg-blue-50" : "bg-transparent"
             )}>
-              <CheckSquare className={cn("w-6 h-6", activeTab === 'attendance' && "fill-blue-600/20")} />
+              <ClipboardCheck className={cn("w-6 h-6", activeTab === 'attendance' && "fill-blue-600/20")} />
             </div>
             <span className="text-[10px] font-medium">Kehadiran</span>
           </button>
