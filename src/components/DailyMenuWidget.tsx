@@ -16,6 +16,7 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
     const [uploading, setUploading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
     const [currentPath, setCurrentPath] = useState<string | null>(null);
@@ -149,56 +150,75 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                         className="w-full text-sm p-4 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 min-h-[100px] transition-all"
                     />
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                        {/* Camera Button */}
+                        <button
+                            onClick={() => cameraInputRef.current?.click()}
+                            disabled={uploading}
+                            className="text-sm font-medium flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
+                        >
+                            {uploading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> : <Camera className="w-4 h-4 text-emerald-500" />}
+                            Kamera
+                        </button>
+
+                        {/* Gallery Button */}
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="text-sm font-medium flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
+                        >
+                            <ImageIcon className="w-4 h-4 text-blue-500" />
+                            Galeri
+                        </button>
+
+                        {photoUrl && (
                             <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="text-sm font-medium flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
-                            >
-                                {uploading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> : <Camera className="w-4 h-4 text-emerald-500" />}
-                                {photoUrl ? 'Ganti Foto' : 'Ambil Foto'}
-                            </button>
-
-                            {photoUrl && (
-                                <button
-                                    onClick={deletePhoto}
-                                    disabled={loading}
-                                    className="text-sm flex items-center justify-center px-4 py-2.5 border border-red-200 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-all active:scale-95"
-                                    title="Hapus Foto"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleFileChange}
-                        />
-
-                        <div className="flex-1"></div>
-
-                        <div className="flex gap-2 justify-end mt-2 sm:mt-0">
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="text-sm font-medium px-4 py-2.5 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                onClick={() => saveAll()}
+                                onClick={deletePhoto}
                                 disabled={loading}
-                                className="text-sm font-bold flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 shadow-sm shadow-emerald-500/20 transition-all active:scale-95"
+                                className="text-sm flex items-center justify-center px-4 py-2.5 border border-red-200 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-all active:scale-95"
+                                title="Hapus Foto"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Simpan
+                                <Trash2 className="w-4 h-4" />
                             </button>
-                        </div>
+                        )}
+                    </div>
+
+                    {/* Camera Input (with capture) */}
+                    <input
+                        type="file"
+                        ref={cameraInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileChange}
+                    />
+
+                    {/* Gallery Input (no capture = shows file picker) */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
+
+                    <div className="flex-1"></div>
+
+                    <div className="flex gap-2 justify-end mt-2 sm:mt-0">
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            className="text-sm font-medium px-4 py-2.5 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            onClick={() => saveAll()}
+                            disabled={loading}
+                            className="text-sm font-bold flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 shadow-sm shadow-emerald-500/20 transition-all active:scale-95"
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Simpan
+                        </button>
                     </div>
                 </div>
             ) : (

@@ -11,14 +11,16 @@ import {
 } from 'recharts';
 import { format, subDays, addDays, eachDayOfInterval } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Loader2, TrendingUp, Users, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, TrendingUp, Users, Calendar, ChevronLeft, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import * as XLSX from 'xlsx';
 
 export function DashboardView() {
     const [stats, setStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [endDate, setEndDate] = useState(new Date());
+    const [exporting, setExporting] = useState(false);
 
     // Calculate start date based on end date (7 days window)
     const startDate = subDays(endDate, 6);
@@ -93,6 +95,109 @@ export function DashboardView() {
 
     const totalThisWeek = useMemo(() => stats.reduce((acc, curr) => acc + curr.count, 0), [stats]);
     const avgThisWeek = useMemo(() => Math.round(totalThisWeek / (stats.length || 1)), [totalThisWeek, stats]);
+
+    // === Excel Export Logic ===
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            const interval = eachDayOfInterval({ start: startDate, end: endDate });
+            const startStr = format(interval[0], 'yyyy-MM-dd');
+            const endStr = format(interval[interval.length - 1], 'yyyy-MM-dd');
+
+            // 1. Fetch all students
+            const { data: students, error: studentsError } = await supabase
+                .from('students')
+                .select('*')
+                .order('class', { ascending: true })
+                .order('name', { ascending: true });
+
+            if (studentsError) throw studentsError;
+
+            // 2. Fetch all logs in the date range
+            const { data: logs, error: logsError } = await supabase
+                .from('mbg_logs')
+                .select('*')
+                .gte('date', startStr)
+                .lte('date', endStr);
+
+            if (logsError) throw logsError;
+
+            // 3. Build header row
+            const dateHeaders = interval.map(d => format(d, 'dd/MM (EEE)', { locale: id }));
+            const headerRow = ['No', 'Nama Siswa', 'Kelas', 'L/P', ...dateHeaders, 'Total Sudah', 'Total Belum'];
+
+            // 4. Build data rows
+            const dataRows = (students || []).map((student, idx) => {
+                let totalSudah = 0;
+                const dailyCells = interval.map(date => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const log = (logs || []).find(l => l.student_id === student.id && l.date === dateStr && l.is_received);
+                    if (log) {
+                        totalSudah++;
+                        return '✓';
+                    }
+                    return '✗';
+                });
+                const totalBelum = interval.length - totalSudah;
+                return [
+                    idx + 1,
+                    student.name,
+                    student.class,
+                    student.gender === 'P' ? 'Perempuan' : 'Laki-laki',
+                    ...dailyCells,
+                    totalSudah,
+                    totalBelum
+                ];
+            });
+
+            // 5. Summary row
+            const summaryRow = ['', 'TOTAL PER HARI', '', '', ...interval.map(date => {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                return (logs || []).filter(l => l.date === dateStr && l.is_received).length;
+            }), totalThisWeek, ''];
+
+            // 6. Build worksheet
+            const ws = XLSX.utils.aoa_to_sheet([
+                [`REKAPITULASI PENERIMAAN MBG`],
+                [`Periode: ${format(startDate, 'd MMMM yyyy', { locale: id })} - ${format(endDate, 'd MMMM yyyy', { locale: id })}`],
+                [],
+                headerRow,
+                ...dataRows,
+                [],
+                summaryRow
+            ]);
+
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 4 },     // No
+                { wch: 28 },    // Nama
+                { wch: 10 },    // Kelas
+                { wch: 12 },    // L/P
+                ...dateHeaders.map(() => ({ wch: 14 })),
+                { wch: 12 },    // Total Sudah
+                { wch: 12 },    // Total Belum
+            ];
+
+            // Merge title cells
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: headerRow.length - 1 } },
+            ];
+
+            // 7. Create workbook & download
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap MBG');
+
+            const fileName = `Rekap_MBG_${format(startDate, 'dd-MM-yyyy')}_sd_${format(endDate, 'dd-MM-yyyy')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+        } catch (err) {
+            console.error('Export error:', err);
+            alert('Gagal mengunduh data. Coba lagi.');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -287,13 +392,42 @@ export function DashboardView() {
                 </div>
             </div>
 
-            {/* Coming Soon: Laporan Detail */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100/50 rounded-2xl p-6 text-center relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 text-emerald-100 opacity-50"><TrendingUp className="w-24 h-24" /></div>
-                <div className="relative z-10">
-                    <p className="text-emerald-800 font-bold tracking-wide">Laporan bulanan detail akan segera hadir!</p>
-                    <p className="text-sm font-medium text-emerald-600/80 mt-1.5">Mendukung rekapitulasi data absensi siswa dan eksport Excel.</p>
+            {/* Export to Excel */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                            Rekapitulasi Data
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5">Export data penerimaan MBG ke file Excel</p>
+                    </div>
                 </div>
+
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 mb-4">
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-700">
+                        <span className="font-semibold">Periode:</span>
+                        <span className="font-bold text-emerald-700">{dateRangeStr}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">File Excel akan berisi daftar semua siswa beserta status penerimaan MBG per hari pada periode yang dipilih.</p>
+                </div>
+
+                <button
+                    onClick={handleExportExcel}
+                    disabled={exporting}
+                    className={cn(
+                        "w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-bold transition-all active:scale-[0.97]",
+                        exporting
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-600 hover:to-teal-600"
+                    )}
+                >
+                    {exporting ? (
+                        <><Loader2 className="w-5 h-5 animate-spin" /> Mengunduh Data...</>
+                    ) : (
+                        <><Download className="w-5 h-5" /> Download Rekap Excel (.xlsx)</>
+                    )}
+                </button>
             </div>
 
         </div>
