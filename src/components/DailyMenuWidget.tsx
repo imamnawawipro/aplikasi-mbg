@@ -16,7 +16,6 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
     const [uploading, setUploading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const cameraInputRef = useRef<HTMLInputElement>(null);
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
     const [currentPath, setCurrentPath] = useState<string | null>(null);
@@ -151,24 +150,20 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                     />
 
                     <div className="flex gap-2 flex-wrap">
-                        {/* Camera Button */}
+                        {/* Single unified photo button - works on all Android devices */}
                         <button
-                            onClick={() => cameraInputRef.current?.click()}
+                            onClick={() => {
+                                // Reset value so Android re-triggers the picker
+                                if (fileInputRef.current) {
+                                    fileInputRef.current.value = '';
+                                    fileInputRef.current.click();
+                                }
+                            }}
                             disabled={uploading}
                             className="text-sm font-medium flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
                         >
                             {uploading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> : <Camera className="w-4 h-4 text-emerald-500" />}
-                            Kamera
-                        </button>
-
-                        {/* Gallery Button */}
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                            className="text-sm font-medium flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
-                        >
-                            <ImageIcon className="w-4 h-4 text-blue-500" />
-                            Galeri
+                            {photoUrl ? 'Ganti Foto' : 'Ambil / Pilih Foto'}
                         </button>
 
                         {photoUrl && (
@@ -183,17 +178,12 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                         )}
                     </div>
 
-                    {/* Camera Input (with capture) */}
-                    <input
-                        type="file"
-                        ref={cameraInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleFileChange}
-                    />
-
-                    {/* Gallery Input (no capture = shows file picker) */}
+                    {/* 
+                        Single file input WITHOUT capture attribute.
+                        On Android, this shows the system "Choose action" dialog 
+                        which lets the user pick Camera OR Gallery.
+                        The key: NO capture attribute = Android shows both options.
+                    */}
                     <input
                         type="file"
                         ref={fileInputRef}
