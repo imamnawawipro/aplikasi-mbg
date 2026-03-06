@@ -15,7 +15,6 @@ interface Student {
 
 interface StudentWithLog extends Student {
     is_received: boolean;
-    status: 'H' | 'S' | 'I' | 'A' | null;
     log_id?: string;
 }
 
@@ -65,11 +64,10 @@ export function StudentList({ selectedDate }: StudentListProps) {
             // 3. Merge data
             const mergedData = (studentsData || []).map((student) => {
                 const log = logsData?.find((l) => l.student_id === student.id);
-                // Default logic: if log exists, use its status. If not, null (belum absen).
+                // Default logic: only checking boolean log exists or true
                 return {
                     ...student,
                     is_received: log ? log.is_received : false,
-                    status: log ? (log.status as any) || (log.is_received ? 'H' : null) : null,
                     log_id: log?.id,
                 };
             });
@@ -83,23 +81,19 @@ export function StudentList({ selectedDate }: StudentListProps) {
         }
     }
 
-    const updateStatus = async (student: StudentWithLog, newStatus: 'H' | 'S' | 'I' | 'A' | null) => {
-        // If clicking the same status, toggle it off (reset to null)
-        const effectiveStatus = student.status === newStatus ? null : newStatus;
-        const isReceived = effectiveStatus === 'H';
+    const updateStatus = async (student: StudentWithLog, newIsReceived: boolean) => {
+        if (student.is_received === newIsReceived) return; // No change needed
 
         // Optimistic Update
         setStudents((prev) =>
             prev.map((s) =>
-                s.id === student.id ? { ...s, status: effectiveStatus, is_received: isReceived } : s
+                s.id === student.id ? { ...s, is_received: newIsReceived } : s
             )
         );
 
         try {
-            if (effectiveStatus === null) {
-                // If unchecking, maybe delete the log or set to null?
-                // Let's delete the log to be clean, OR set status to null.
-                // Depending on requirement. Let's delete for "Reset".
+            if (!newIsReceived) {
+                // Remove log if explicitly set to "Belum"
                 const { error } = await supabase
                     .from('mbg_logs')
                     .delete()
@@ -113,8 +107,8 @@ export function StudentList({ selectedDate }: StudentListProps) {
                         {
                             student_id: student.id,
                             date: formattedDate,
-                            is_received: isReceived,
-                            status: effectiveStatus
+                            is_received: true,
+                            status: 'H' // Default status required for valid schema potentially
                         },
                         { onConflict: 'student_id, date' }
                     );
@@ -126,19 +120,19 @@ export function StudentList({ selectedDate }: StudentListProps) {
             // Revert
             setStudents((prev) =>
                 prev.map((s) =>
-                    s.id === student.id ? { ...s, status: student.status, is_received: student.is_received } : s
+                    s.id === student.id ? { ...s, is_received: student.is_received } : s
                 )
             );
             alert('Gagal menyimpan perubahan. Coba lagi.');
         }
     };
 
-    const toggleAll = async (targetStatus: 'H' | null) => {
+    const toggleAll = async (targetIsReceived: boolean) => {
         if (filteredStudents.length === 0) return;
 
-        const confirmMsg = targetStatus === 'H'
-            ? `Tandai ${filteredStudents.length} siswa sebagai HADIR (H)?`
-            : `Reset status ${filteredStudents.length} siswa?`;
+        const confirmMsg = targetIsReceived
+            ? `Tandai ${filteredStudents.length} siswa SUDAH MEMBAWA MBG?`
+            : `Reset status ${filteredStudents.length} siswa menjadi BELUM MEMBAWA?`;
 
         if (!confirm(confirmMsg)) return;
 
@@ -147,11 +141,11 @@ export function StudentList({ selectedDate }: StudentListProps) {
 
         // Optimistic
         setStudents(prev => prev.map(s =>
-            affectedIds.includes(s.id) ? { ...s, status: targetStatus, is_received: targetStatus === 'H' } : s
+            affectedIds.includes(s.id) ? { ...s, is_received: targetIsReceived } : s
         ));
 
         try {
-            if (targetStatus === null) {
+            if (!targetIsReceived) {
                 const { error } = await supabase
                     .from('mbg_logs')
                     .delete()
@@ -163,7 +157,7 @@ export function StudentList({ selectedDate }: StudentListProps) {
                     student_id: s.id,
                     date: formattedDate,
                     is_received: true,
-                    status: targetStatus
+                    status: 'H'
                 }));
 
                 const { error } = await supabase
@@ -206,13 +200,10 @@ export function StudentList({ selectedDate }: StudentListProps) {
     // Let's implement Global Day Stats (Visible all the time).
 
     const dailyStats = useMemo(() => {
-        const hadirs = students.filter(s => s.status === 'H');
+        const sudah = students.filter(s => s.is_received).length;
         return {
-            total: hadirs.length, // Total Hadir/Makan
-            H: hadirs.length,
-            S: students.filter(s => s.status === 'S').length,
-            I: students.filter(s => s.status === 'I').length,
-            A: students.filter(s => s.status === 'A').length,
+            sudah,
+            belum: students.length - sudah,
             totalStudents: students.length
         };
     }, [students]);
@@ -247,26 +238,16 @@ export function StudentList({ selectedDate }: StudentListProps) {
                 {/* Top Controls: Stats & Add Buttons */}
                 <div className="flex flex-col gap-4">
                     {/* Stats Bar */}
-                    <div className="grid grid-cols-4 gap-3 sm:gap-4">
-                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 rounded-2xl p-4 sm:p-5 text-center shadow-sm relative overflow-hidden group">
                             <div className="absolute inset-0 bg-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="block text-[10px] sm:text-xs text-emerald-600 font-bold uppercase tracking-wider">Hadir</span>
-                            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-1">{dailyStats.H}</span>
+                            <span className="block text-xs sm:text-sm text-emerald-600 font-bold uppercase tracking-wider">Sudah Membawa MBG</span>
+                            <span className="text-3xl sm:text-4xl font-extrabold text-emerald-700 mt-2 block">{dailyStats.sudah}</span>
                         </div>
-                        <div className="bg-gradient-to-br from-yellow-50 to-amber-50/50 border border-yellow-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-yellow-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="block text-[10px] sm:text-xs text-yellow-600 font-bold uppercase tracking-wider">Sakit</span>
-                            <span className="text-2xl sm:text-3xl font-extrabold text-yellow-700 mt-1">{dailyStats.S}</span>
-                        </div>
-                        <div className="bg-gradient-to-br from-blue-50 to-sky-50/50 border border-blue-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="block text-[10px] sm:text-xs text-blue-600 font-bold uppercase tracking-wider">Izin</span>
-                            <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 mt-1">{dailyStats.I}</span>
-                        </div>
-                        <div className="bg-gradient-to-br from-red-50 to-rose-50/50 border border-red-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="block text-[10px] sm:text-xs text-red-600 font-bold uppercase tracking-wider">Alfa</span>
-                            <span className="text-2xl sm:text-3xl font-extrabold text-red-700 mt-1">{dailyStats.A}</span>
+                        <div className="bg-gradient-to-br from-rose-50 to-pink-50/50 border border-rose-100 rounded-2xl p-4 sm:p-5 text-center shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-rose-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="block text-xs sm:text-sm text-rose-600 font-bold uppercase tracking-wider">Belum Membawa</span>
+                            <span className="text-3xl sm:text-4xl font-extrabold text-rose-700 mt-2 block">{dailyStats.belum}</span>
                         </div>
                     </div>
 
@@ -334,20 +315,20 @@ export function StudentList({ selectedDate }: StudentListProps) {
 
                     <div className="flex gap-3 w-full sm:w-auto">
                         <button
-                            onClick={() => toggleAll('H')}
+                            onClick={() => toggleAll(true)}
                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border-2 border-emerald-500 text-emerald-700 text-sm font-bold rounded-xl hover:bg-emerald-50 hover:text-emerald-800 transition-all shadow-sm active:scale-95"
                         >
                             <CheckSquare className="w-4 h-4" />
-                            Semua Hadir
+                            Semua Sudah
                         </button>
 
                         <button
-                            onClick={() => toggleAll(null)}
+                            onClick={() => toggleAll(false)}
                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm active:scale-95"
-                            title="Reset Checklist"
+                            title="Semua Belum"
                         >
                             <Square className="w-4 h-4" />
-                            Reset
+                            Semua Belum
                         </button>
                     </div>
                 </div>
@@ -391,11 +372,7 @@ export function StudentList({ selectedDate }: StudentListProps) {
                             key={student.id}
                             className={cn(
                                 "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-3 bg-white/80 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md",
-                                student.status === 'H' ? "border-emerald-300 bg-emerald-50/20" :
-                                    student.status === 'S' ? "border-yellow-300 bg-yellow-50/20" :
-                                        student.status === 'I' ? "border-blue-300 bg-blue-50/20" :
-                                            student.status === 'A' ? "border-red-300 bg-red-50/20" :
-                                                "border-transparent border-[2px] border-b-gray-100 border-r-gray-100 hover:border-gray-200"
+                                student.is_received ? "border-emerald-300 bg-emerald-50/20" : "border-transparent border-[2px] border-b-gray-100 border-r-gray-100 hover:border-gray-200"
                             )}
                         >
                             <div className="flex items-start gap-4 mb-4 sm:mb-0">
@@ -412,53 +389,42 @@ export function StudentList({ selectedDate }: StudentListProps) {
                                         <span className="text-gray-400">•</span>
                                         <span className="font-medium">{student.gender === 'P' ? 'Perempuan' : 'Laki-laki'}</span>
 
-                                        {student.status && (
-                                            <>
-                                                <span className="text-gray-400 hidden sm:inline">•</span>
-                                                <span className={cn(
-                                                    "font-bold px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider",
-                                                    student.status === 'H' ? 'bg-emerald-100 text-emerald-700' :
-                                                        student.status === 'S' ? 'bg-yellow-100 text-yellow-700' :
-                                                            student.status === 'I' ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-red-100 text-red-700'
-                                                )}>
-                                                    Status: {
-                                                        student.status === 'H' ? 'Hadir' :
-                                                            student.status === 'S' ? 'Sakit' :
-                                                                student.status === 'I' ? 'Izin' : 'Alfa'
-                                                    }
-                                                </span>
-                                            </>
-                                        )}
+                                        <span className="text-gray-400 hidden sm:inline">•</span>
+                                        <span className={cn(
+                                            "font-bold px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider",
+                                            student.is_received ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                                        )}>
+                                            {student.is_received ? 'Sudah Membawa' : 'Belum'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 sm:gap-2.5 self-center sm:self-auto w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0">
-                                {[
-                                    { id: 'H', label: 'H', color: 'emerald', fullLabel: 'Hadir' },
-                                    { id: 'S', label: 'S', color: 'yellow', fullLabel: 'Sakit' },
-                                    { id: 'I', label: 'I', color: 'blue', fullLabel: 'Izin' },
-                                    { id: 'A', label: 'A', color: 'red', fullLabel: 'Alfa' },
-                                ].map((type) => (
-                                    <button
-                                        key={type.id}
-                                        onClick={() => updateStatus(student, type.id as any)}
-                                        className={cn(
-                                            "flex-1 sm:flex-none sm:w-14 sm:h-14 py-3 sm:py-0 rounded-2xl font-black text-base sm:text-xl transition-all duration-300 flex items-center justify-center flex-col gap-0.5 group active:scale-95",
-                                            student.status === type.id
-                                                ? type.color === 'emerald' ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105" :
-                                                    type.color === 'yellow' ? "bg-gradient-to-br from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30 scale-105" :
-                                                        type.color === 'blue' ? "bg-gradient-to-br from-blue-500 to-sky-500 text-white shadow-lg shadow-blue-500/30 scale-105" :
-                                                            "bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30 scale-105"
-                                                : "bg-white border-2 border-gray-100 text-gray-400 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-700"
-                                        )}
-                                        title={type.fullLabel}
-                                    >
-                                        <span>{type.label}</span>
-                                        {student.status === type.id && <span className="text-[9px] uppercase tracking-widest leading-none opacity-90 block sm:hidden">{type.fullLabel}</span>}
-                                    </button>
-                                ))}
+                            <div className="flex gap-2 sm:gap-3 self-center sm:self-auto w-full sm:w-auto mt-4 sm:mt-0">
+                                <button
+                                    onClick={() => updateStatus(student, true)}
+                                    className={cn(
+                                        "flex-1 sm:flex-none px-4 py-3 sm:py-2.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 active:scale-95",
+                                        student.is_received
+                                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
+                                            : "bg-white border-2 border-emerald-100 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50"
+                                    )}
+                                >
+                                    <CheckSquare className={cn("w-5 h-5", student.is_received ? "text-white" : "text-emerald-500")} />
+                                    <span>Sudah</span>
+                                </button>
+                                <button
+                                    onClick={() => updateStatus(student, false)}
+                                    className={cn(
+                                        "flex-1 sm:flex-none px-4 py-3 sm:py-2.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 active:scale-95",
+                                        !student.is_received
+                                            ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 scale-105"
+                                            : "bg-white border-2 border-gray-100 text-gray-500 hover:border-gray-200 hover:bg-gray-50 hover:text-rose-600"
+                                    )}
+                                >
+                                    <Square className={cn("w-5 h-5", !student.is_received ? "text-white" : "text-gray-400")} />
+                                    <span>Belum</span>
+                                </button>
                             </div>
                         </div>
                     ))}
