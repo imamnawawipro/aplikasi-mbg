@@ -371,19 +371,19 @@ export function StudentList({ selectedDate }: StudentListProps) {
                         <div
                             key={student.id}
                             className={cn(
-                                "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-3 bg-white/80 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md",
-                                student.is_received ? "border-emerald-300 bg-emerald-50/20" : "border-transparent border-[2px] border-b-gray-100 border-r-gray-100 hover:border-gray-200"
+                                "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-2.5 bg-white rounded-2xl border-2 transition-colors duration-200 shadow-sm",
+                                student.is_received ? "border-emerald-200 bg-emerald-50/30" : "border-gray-100 hover:border-gray-200"
                             )}
                         >
                             <div className="flex items-start gap-4 mb-4 sm:mb-0">
                                 <div className={cn(
-                                    "w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black min-w-[48px] shadow-sm",
+                                    "w-11 h-11 rounded-xl flex items-center justify-center text-base font-black min-w-[44px] shadow-sm",
                                     student.gender === 'P' ? "bg-gradient-to-br from-pink-100 to-rose-100 text-rose-600 border border-pink-200" : "bg-gradient-to-br from-blue-100 to-sky-100 text-sky-600 border border-blue-200"
                                 )}>
                                     {student.gender || 'L'}
                                 </div>
-                                <div className="pt-0.5">
-                                    <h3 className="text-[17px] font-bold text-gray-900 tracking-tight leading-none mb-1.5">{student.name}</h3>
+                                <div className="pt-0.5 min-w-0">
+                                    <h3 className="text-[15px] font-bold text-gray-900 tracking-tight leading-snug mb-1 truncate">{student.name}</h3>
                                     <div className="flex flex-wrap gap-2 text-xs text-gray-500 items-center">
                                         <span className="font-semibold text-gray-600 px-2 py-0.5 bg-gray-100 rounded-md">Kelas {student.class}</span>
                                         <span className="text-gray-400">•</span>
@@ -400,14 +400,14 @@ export function StudentList({ selectedDate }: StudentListProps) {
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 sm:gap-3 self-center sm:self-auto w-full sm:w-auto mt-4 sm:mt-0">
+                            <div className="flex gap-2 self-stretch sm:self-auto w-full sm:w-auto mt-3 sm:mt-0">
                                 <button
                                     onClick={() => updateStatus(student, true)}
                                     className={cn(
-                                        "flex-1 sm:flex-none px-4 py-3 sm:py-2.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 active:scale-95",
+                                        "flex-1 sm:flex-none min-h-[48px] px-4 py-2.5 rounded-xl font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 active:scale-[0.97]",
                                         student.is_received
-                                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105"
-                                            : "bg-white border-2 border-emerald-100 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50"
+                                            ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25"
+                                            : "bg-emerald-50 border border-emerald-200 text-emerald-600"
                                     )}
                                 >
                                     <CheckSquare className={cn("w-5 h-5", student.is_received ? "text-white" : "text-emerald-500")} />
@@ -416,10 +416,10 @@ export function StudentList({ selectedDate }: StudentListProps) {
                                 <button
                                     onClick={() => updateStatus(student, false)}
                                     className={cn(
-                                        "flex-1 sm:flex-none px-4 py-3 sm:py-2.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 flex items-center justify-center gap-2 active:scale-95",
+                                        "flex-1 sm:flex-none min-h-[48px] px-4 py-2.5 rounded-xl font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 active:scale-[0.97]",
                                         !student.is_received
-                                            ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 scale-105"
-                                            : "bg-white border-2 border-gray-100 text-gray-500 hover:border-gray-200 hover:bg-gray-50 hover:text-rose-600"
+                                            ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-md shadow-rose-500/25"
+                                            : "bg-gray-50 border border-gray-200 text-gray-500"
                                     )}
                                 >
                                     <Square className={cn("w-5 h-5", !student.is_received ? "text-white" : "text-gray-400")} />

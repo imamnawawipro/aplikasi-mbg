@@ -68,15 +68,15 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-28 sm:pb-20">
+    <div className="min-h-screen min-h-[100dvh] bg-gray-50 text-gray-900 font-sans pb-28 sm:pb-20">
 
       {/* Modern Gradient Header */}
       <header
         className={cn(
-          "sticky top-0 z-20 transition-all duration-500 ease-in-out",
+          "sticky top-0 z-20 will-change-transform",
           scrolled
-            ? "bg-white/90 backdrop-blur-xl shadow-glass py-4 border-b border-gray-100"
-            : "bg-gradient-to-r from-emerald-600 to-teal-600 py-10 shadow-lg rounded-b-[2.5rem] mb-6 relative overflow-hidden"
+            ? "bg-white/90 backdrop-blur-xl shadow-sm py-3 border-b border-gray-100/80 transition-all duration-300 ease-out"
+            : "bg-gradient-to-r from-emerald-600 to-teal-600 py-8 sm:py-10 shadow-lg rounded-b-[2rem] mb-4 relative overflow-hidden transition-all duration-300 ease-out"
         )}
       >
         {/* Subtle background element when not scrolled */}
@@ -94,14 +94,14 @@ function App() {
                 Si-MBG-E
               </p>
               <h1 className={cn(
-                "font-extrabold transition-all duration-500 origin-left mt-0.5",
-                scrolled ? "text-xl text-gray-800" : "text-3xl text-white tracking-tight drop-shadow-sm"
+                "font-extrabold origin-left mt-0.5 transition-all duration-300 ease-out",
+                scrolled ? "text-lg text-gray-800" : "text-2xl sm:text-3xl text-white tracking-tight drop-shadow-sm"
               )}>
                 {scrolled ? "Si-MBG-E" : greeting}
               </h1>
               <div className={cn(
-                "overflow-hidden transition-all duration-500",
-                scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100 mt-1.5"
+                "overflow-hidden transition-all duration-300 ease-out",
+                scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100 mt-1"
               )}>
                 <p className="text-emerald-50 text-sm font-medium flex items-center gap-1.5">
                   <CalendarDays className="w-4 h-4 opacity-80" />
@@ -168,7 +168,7 @@ function App() {
       </main>
 
       {/* Bottom Navigation Bar (Modern) */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-lg border-t border-gray-100 pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-t border-gray-100/80 pb-safe pt-1 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
         <div className="max-w-md mx-auto flex items-center justify-around h-16 pb-1">
           {/* Tab 1: Menu Harian */}
           <button

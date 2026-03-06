@@ -46,13 +46,13 @@ export function LoginPage() {
     }
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-50 p-4">
-            {/* Background Decorative Elements */}
-            <div className="absolute top-0 -left-10 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-            <div className="absolute top-0 -right-10 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animate-delay-200"></div>
-            <div className="absolute -bottom-20 left-20 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animate-delay-100"></div>
+        <div className="relative min-h-screen min-h-[100dvh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30 p-4">
+            {/* Background Decorative Elements - reduced blur for mobile GPU */}
+            <div className="absolute top-0 -left-10 w-60 h-60 bg-emerald-400 rounded-full mix-blend-multiply filter blur-2xl opacity-15 animate-blob"></div>
+            <div className="absolute top-0 -right-10 w-60 h-60 bg-teal-400 rounded-full mix-blend-multiply filter blur-2xl opacity-15 animate-blob animate-delay-200"></div>
+            <div className="absolute -bottom-20 left-20 w-60 h-60 bg-cyan-400 rounded-full mix-blend-multiply filter blur-2xl opacity-15 animate-blob animate-delay-100"></div>
 
-            <div className="relative glass w-full max-w-md rounded-3xl overflow-hidden shadow-glass animate-fade-in-up">
+            <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-xl bg-white animate-fade-in-up">
                 {/* Header */}
                 <div className={cn(
                     "p-10 text-center transition-all duration-500 relative overflow-hidden",
@@ -61,17 +61,17 @@ export function LoginPage() {
                     {/* Inner subtle glow */}
                     <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
 
-                    <div className="bg-white/20 w-20 h-20 rounded-2xl rotate-3 flex items-center justify-center mx-auto mb-6 backdrop-blur-md shadow-lg border border-white/30 transform transition-transform hover:rotate-12 duration-300">
-                        {isLogin ? <LogIn className="w-10 h-10 text-white -rotate-3" /> : <UserPlus className="w-10 h-10 text-white -rotate-3" />}
+                    <div className="bg-white/20 w-16 h-16 rounded-2xl rotate-3 flex items-center justify-center mx-auto mb-5 backdrop-blur-sm shadow-lg border border-white/30">
+                        {isLogin ? <LogIn className="w-8 h-8 text-white -rotate-3" /> : <UserPlus className="w-8 h-8 text-white -rotate-3" />}
                     </div>
-                    <h2 className="text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight drop-shadow-sm">
                         {isLogin ? 'Login Guru' : 'Daftar Akun'}
                     </h2>
                     <p className="text-emerald-50 text-sm font-medium mt-2 tracking-wide uppercase">Si-MBG-E</p>
                 </div>
 
                 {/* Form */}
-                <div className="p-8 bg-white/60 backdrop-blur-md">
+                <div className="p-6 sm:p-8 bg-white">
                     <form onSubmit={handleAuth} className="space-y-5">
                         {message && (
                             <div className={cn(
