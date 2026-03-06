@@ -4,7 +4,7 @@ import { StudentList } from './components/StudentList';
 import { DailyMenuWidget } from './components/DailyMenuWidget';
 import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
-import { LayoutDashboard, Utensils, CalendarDays, LogOut, Loader2, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Utensils, CalendarDays, LogOut, Loader2, ClipboardCheck, UtensilsCrossed } from 'lucide-react';
 import { cn } from './lib/utils';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -75,30 +75,36 @@ function App() {
         className={cn(
           "sticky top-0 z-20 transition-all duration-500 ease-in-out",
           scrolled
-            ? "bg-white/90 backdrop-blur-md shadow-sm py-3"
-            : "bg-gradient-to-r from-blue-600 to-indigo-700 py-8 shadow-xl rounded-b-[2.5rem] mb-6"
+            ? "bg-white/90 backdrop-blur-xl shadow-glass py-4 border-b border-gray-100"
+            : "bg-gradient-to-r from-emerald-600 to-teal-600 py-10 shadow-lg rounded-b-[2.5rem] mb-6 relative overflow-hidden"
         )}
       >
-        <div className="max-w-md mx-auto px-6">
+        {/* Subtle background element when not scrolled */}
+        {!scrolled && (
+          <div className="absolute inset-0 bg-white/5 opacity-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent pointer-events-none"></div>
+        )}
+
+        <div className="max-w-md mx-auto px-6 relative z-10">
           <div className="flex items-center justify-between">
             <div className="transition-all duration-500">
               <p className={cn(
-                "text-xs font-bold uppercase tracking-widest transition-colors duration-300",
-                scrolled ? "text-blue-600" : "text-blue-200"
+                "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-300",
+                scrolled ? "text-emerald-600" : "text-emerald-100/80"
               )}>
                 Si-MBG-E
               </p>
               <h1 className={cn(
-                "font-bold transition-all duration-500 origin-left",
-                scrolled ? "text-lg text-gray-800 scale-95" : "text-3xl text-white tracking-tight"
+                "font-extrabold transition-all duration-500 origin-left mt-0.5",
+                scrolled ? "text-xl text-gray-800" : "text-3xl text-white tracking-tight drop-shadow-sm"
               )}>
                 {scrolled ? "Si-MBG-E" : greeting}
               </h1>
               <div className={cn(
                 "overflow-hidden transition-all duration-500",
-                scrolled ? "max-h-0 opacity-0" : "max-h-10 opacity-100 mt-1"
+                scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100 mt-1.5"
               )}>
-                <p className="text-blue-100 text-sm font-medium">
+                <p className="text-emerald-50 text-sm font-medium flex items-center gap-1.5">
+                  <CalendarDays className="w-4 h-4 opacity-80" />
                   {format(new Date(), 'EEEE, dd MMMM yyyy', { locale: id })}
                 </p>
               </div>
@@ -107,15 +113,17 @@ function App() {
             <button
               onClick={handleLogout}
               className={cn(
-                "p-2.5 rounded-2xl transition-all duration-500 group",
+                "p-3 rounded-2xl transition-all duration-500 group relative overflow-hidden",
                 scrolled
-                  ? "bg-blue-50 text-blue-600 shadow-sm hover:bg-red-50 hover:text-red-500"
-                  : "bg-white/10 text-white backdrop-blur-md border border-white/20 hover:bg-white/20 hover:text-red-200"
+                  ? "bg-gray-50 text-gray-400 shadow-sm hover:bg-red-50 hover:text-red-500 border border-transparent"
+                  : "glass text-white hover:bg-white/20 hover:text-red-100 border-white/20 shadow-glass"
               )}
               title="Logout"
             >
-              {scrolled ? <LogOut className="w-6 h-6" /> : <UtensilsCrossed className="w-6 h-6 group-hover:hidden" />}
-              {!scrolled && <LogOut className="w-6 h-6 hidden group-hover:block" />}
+              <div className="relative z-10 flex items-center justify-center">
+                {scrolled ? <LogOut className="w-5 h-5 transition-colors" /> : <UtensilsCrossed className="w-6 h-6 group-hover:scale-0 transition-transform duration-300" />}
+                {!scrolled && <LogOut className="w-6 h-6 absolute inset-0 scale-0 group-hover:scale-100 transition-transform duration-300" />}
+              </div>
             </button>
           </div>
         </div>
@@ -159,64 +167,70 @@ function App() {
 
       </main>
 
-      {/* Bottom Navigation Bar (Mobile Style) */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t pb-safe pt-2 px-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="max-w-md mx-auto flex items-center justify-around h-16">
+      {/* Bottom Navigation Bar (Modern) */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-lg border-t border-gray-100 pb-safe pt-2 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+        <div className="max-w-md mx-auto flex items-center justify-around h-16 pb-1">
           {/* Tab 1: Menu Harian */}
           <button
             onClick={() => setActiveTab('menu')}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
-              activeTab === 'menu'
-                ? "text-blue-600 -translate-y-1"
-                : "text-gray-400 hover:text-gray-600"
-            )}
+            className="relative flex flex-col items-center justify-center gap-1 w-20 h-full group"
           >
             <div className={cn(
-              "p-2 rounded-xl transition-all",
-              activeTab === 'menu' ? "bg-blue-50" : "bg-transparent"
+              "absolute -top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all duration-300",
+              activeTab === 'menu' ? "bg-emerald-500 scale-100 opacity-100" : "scale-0 opacity-0"
+            )}></div>
+            <div className={cn(
+              "p-2.5 rounded-2xl transition-all duration-300",
+              activeTab === 'menu' ? "bg-emerald-50 text-emerald-600 scale-110" : "bg-transparent text-gray-400 group-hover:text-gray-600 group-hover:bg-gray-50"
             )}>
-              <Utensils className={cn("w-6 h-6", activeTab === 'menu' && "fill-blue-600/20")} />
+              <Utensils className={cn("w-6 h-6 transition-all", activeTab === 'menu' && "fill-emerald-600/20")} strokeWidth={activeTab === 'menu' ? 2.5 : 2} />
             </div>
-            <span className="text-[10px] font-medium">Menu</span>
+            <span className={cn(
+              "text-[10px] transition-all duration-300",
+              activeTab === 'menu' ? "font-bold text-emerald-600" : "font-medium text-gray-400 group-hover:text-gray-600"
+            )}>Menu</span>
           </button>
 
           {/* Tab 2: Kehadiran */}
           <button
             onClick={() => setActiveTab('attendance')}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
-              activeTab === 'attendance'
-                ? "text-blue-600 -translate-y-1"
-                : "text-gray-400 hover:text-gray-600"
-            )}
+            className="relative flex flex-col items-center justify-center gap-1 w-20 h-full group"
           >
             <div className={cn(
-              "p-2 rounded-xl transition-all",
-              activeTab === 'attendance' ? "bg-blue-50" : "bg-transparent"
+              "absolute -top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all duration-300",
+              activeTab === 'attendance' ? "bg-emerald-500 scale-100 opacity-100" : "scale-0 opacity-0"
+            )}></div>
+            <div className={cn(
+              "p-2.5 rounded-2xl transition-all duration-300",
+              activeTab === 'attendance' ? "bg-emerald-50 text-emerald-600 scale-110" : "bg-transparent text-gray-400 group-hover:text-gray-600 group-hover:bg-gray-50"
             )}>
-              <ClipboardCheck className={cn("w-6 h-6", activeTab === 'attendance' && "fill-blue-600/20")} />
+              <ClipboardCheck className={cn("w-6 h-6 transition-all", activeTab === 'attendance' && "fill-emerald-600/20")} strokeWidth={activeTab === 'attendance' ? 2.5 : 2} />
             </div>
-            <span className="text-[10px] font-medium">Kehadiran</span>
+            <span className={cn(
+              "text-[10px] transition-all duration-300",
+              activeTab === 'attendance' ? "font-bold text-emerald-600" : "font-medium text-gray-400 group-hover:text-gray-600"
+            )}>Kehadiran</span>
           </button>
 
           {/* Tab 3: Laporan */}
           <button
             onClick={() => setActiveTab('report')}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 w-16 transition-all duration-300",
-              activeTab === 'report'
-                ? "text-blue-600 -translate-y-1"
-                : "text-gray-400 hover:text-gray-600"
-            )}
+            className="relative flex flex-col items-center justify-center gap-1 w-20 h-full group"
           >
             <div className={cn(
-              "p-2 rounded-xl transition-all",
-              activeTab === 'report' ? "bg-blue-50" : "bg-transparent"
+              "absolute -top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all duration-300",
+              activeTab === 'report' ? "bg-emerald-500 scale-100 opacity-100" : "scale-0 opacity-0"
+            )}></div>
+            <div className={cn(
+              "p-2.5 rounded-2xl transition-all duration-300",
+              activeTab === 'report' ? "bg-emerald-50 text-emerald-600 scale-110" : "bg-transparent text-gray-400 group-hover:text-gray-600 group-hover:bg-gray-50"
             )}>
-              <LayoutDashboard className={cn("w-6 h-6", activeTab === 'report' && "fill-blue-600/20")} />
+              <LayoutDashboard className={cn("w-6 h-6 transition-all", activeTab === 'report' && "fill-emerald-600/20")} strokeWidth={activeTab === 'report' ? 2.5 : 2} />
             </div>
-            <span className="text-[10px] font-medium">Laporan</span>
+            <span className={cn(
+              "text-[10px] transition-all duration-300",
+              activeTab === 'report' ? "font-bold text-emerald-600" : "font-medium text-gray-400 group-hover:text-gray-600"
+            )}>Laporan</span>
           </button>
         </div>
       </div>

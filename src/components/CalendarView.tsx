@@ -14,31 +14,31 @@ export function CalendarView({ selectedDate, onDateChange }: CalendarViewProps) 
     const handleToday = () => onDateChange(new Date());
 
     return (
-        <div className="flex flex-col items-center gap-4 p-4 bg-white dark:bg-card rounded-lg shadow-sm border mb-6">
+        <div className="flex flex-col items-center gap-4 p-5 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-100 mb-6 transition-all hover:shadow-md">
             <div className="flex items-center justify-between w-full max-w-sm">
                 <button
                     onClick={handlePrevDay}
-                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    className="p-2.5 rounded-xl hover:bg-emerald-50 text-gray-500 hover:text-emerald-600 transition-all active:scale-95 group"
                     aria-label="Previous day"
                 >
-                    <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                    <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
                 </button>
 
                 <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    <span className="text-lg font-bold text-gray-800 tracking-tight">
                         {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: id })}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {isToday(selectedDate) ? '(Hari Ini)' : ''}
+                    <span className="text-[11px] font-bold tracking-wider uppercase text-emerald-500 mt-0.5">
+                        {isToday(selectedDate) ? 'Hari Ini' : ''}
                     </span>
                 </div>
 
                 <button
                     onClick={handleNextDay}
-                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    className="p-2.5 rounded-xl hover:bg-emerald-50 text-gray-500 hover:text-emerald-600 transition-all active:scale-95 group"
                     aria-label="Next day"
                 >
-                    <ChevronRight className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
                 </button>
             </div>
 
@@ -46,8 +46,8 @@ export function CalendarView({ selectedDate, onDateChange }: CalendarViewProps) 
                 <button
                     onClick={handleToday}
                     className={cn(
-                        "flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-full",
-                        "hover:bg-primary/20 transition-colors"
+                        "flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full",
+                        "hover:from-emerald-400 hover:to-teal-400 shadow-sm shadow-emerald-500/20 transition-all active:scale-95 mt-1"
                     )}
                 >
                     <CalendarIcon className="w-4 h-4" />

@@ -121,28 +121,32 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-card rounded-xl border shadow-sm p-4 mb-6">
-            <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    🍽️ Menu Hari Ini
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-gray-100 shadow-sm p-5 mb-6 transition-all hover:shadow-md relative overflow-hidden group">
+            {/* Subtle top border accent */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+
+            <div className="flex justify-between items-start mb-4">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2.5">
+                    <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">🍽️</span>
+                    Menu Hari Ini
                 </h3>
                 {!isEditing && (
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="text-xs flex items-center gap-1 text-primary hover:underline"
+                        className="text-xs font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-full text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors"
                     >
-                        <Edit2 className="w-3 h-3" /> Edit
+                        <Edit2 className="w-3.5 h-3.5" /> Edit Menu
                     </button>
                 )}
             </div>
 
             {isEditing ? (
-                <div className="space-y-3">
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <textarea
                         value={menuItems}
                         onChange={(e) => setMenuItems(e.target.value)}
                         placeholder="Tulis menu hari ini... (Contoh: Nasi, Ayam Goreng, Sayur Asem, Jeruk)"
-                        className="w-full text-sm p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px]"
+                        className="w-full text-sm p-4 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 min-h-[100px] transition-all"
                     />
 
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -150,17 +154,17 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
-                                className="text-sm flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 text-gray-600"
+                                className="text-sm font-medium flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 shadow-sm transition-all active:scale-95"
                             >
-                                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                {photoUrl ? 'Ganti Foto' : 'Ambil/Upload Foto'}
+                                {uploading ? <Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> : <Camera className="w-4 h-4 text-emerald-500" />}
+                                {photoUrl ? 'Ganti Foto' : 'Ambil Foto'}
                             </button>
 
                             {photoUrl && (
                                 <button
                                     onClick={deletePhoto}
                                     disabled={loading}
-                                    className="text-sm flex items-center justify-center px-3 py-2 border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                                    className="text-sm flex items-center justify-center px-4 py-2.5 border border-red-200 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-all active:scale-95"
                                     title="Hapus Foto"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -179,17 +183,17 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
 
                         <div className="flex-1"></div>
 
-                        <div className="flex gap-2 justify-end">
+                        <div className="flex gap-2 justify-end mt-2 sm:mt-0">
                             <button
                                 onClick={() => setIsEditing(false)}
-                                className="text-sm px-3 py-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                                className="text-sm font-medium px-4 py-2.5 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
                             >
                                 Batal
                             </button>
                             <button
                                 onClick={() => saveAll()}
                                 disabled={loading}
-                                className="text-sm flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                                className="text-sm font-bold flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 shadow-sm shadow-emerald-500/20 transition-all active:scale-95"
                             >
                                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 Simpan
@@ -198,26 +202,30 @@ export function DailyMenuWidget({ selectedDate }: DailyMenuWidgetProps) {
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-5 animate-in fade-in duration-300">
                     {photoUrl ? (
-                        <div className="w-full sm:w-1/3 aspect-video sm:aspect-square rounded-lg overflow-hidden bg-gray-100 border relative group">
+                        <div className="w-full sm:w-1/3 aspect-video sm:aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-100 relative group shadow-sm">
                             <img
                                 src={photoUrl}
                                 alt="Menu"
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         </div>
                     ) : (
-                        <div className="hidden sm:flex w-24 h-24 rounded-lg bg-gray-100 items-center justify-center text-gray-300">
-                            <ImageIcon className="w-8 h-8" />
+                        <div className="hidden sm:flex w-28 h-28 rounded-xl bg-gray-50 border border-dashed border-gray-200 items-center justify-center text-gray-300">
+                            <ImageIcon className="w-8 h-8 opacity-50" />
                         </div>
                     )}
 
-                    <div className="flex-1">
+                    <div className="flex-1 py-1">
                         {menuItems ? (
-                            <p className="text-gray-700 whitespace-pre-line">{menuItems}</p>
+                            <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-line">{menuItems}</p>
                         ) : (
-                            <p className="text-gray-400 italic text-sm">Belum ada info menu.</p>
+                            <div className="h-full flex flex-col justify-center">
+                                <p className="text-gray-400 font-medium">Belum ada info menu.</p>
+                                <p className="text-xs text-gray-400 mt-1">Klik Edit Menu untuk menambahkan.</p>
+                            </div>
                         )}
                     </div>
                 </div>

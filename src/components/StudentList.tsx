@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Loader2, Check, AlertCircle, UserPlus, Upload, Search, Filter, CheckSquare, Square } from 'lucide-react';
+import { Loader2, AlertCircle, UserPlus, Upload, Search, Filter, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { AddStudentDialog } from './AddStudentDialog';
@@ -133,10 +133,13 @@ export function StudentList({ selectedDate }: StudentListProps) {
         }
     };
 
-    const toggleAll = async (targetStatus: 'H') => {
+    const toggleAll = async (targetStatus: 'H' | null) => {
         if (filteredStudents.length === 0) return;
 
-        const confirmMsg = `Tandai ${filteredStudents.length} siswa sebagai HADIR (H)?`;
+        const confirmMsg = targetStatus === 'H'
+            ? `Tandai ${filteredStudents.length} siswa sebagai HADIR (H)?`
+            : `Reset status ${filteredStudents.length} siswa?`;
+
         if (!confirm(confirmMsg)) return;
 
         setLoading(true);
@@ -144,23 +147,31 @@ export function StudentList({ selectedDate }: StudentListProps) {
 
         // Optimistic
         setStudents(prev => prev.map(s =>
-            affectedIds.includes(s.id) ? { ...s, status: targetStatus, is_received: true } : s
+            affectedIds.includes(s.id) ? { ...s, status: targetStatus, is_received: targetStatus === 'H' } : s
         ));
 
         try {
-            const updates = filteredStudents.map(s => ({
-                student_id: s.id,
-                date: formattedDate,
-                is_received: true,
-                status: targetStatus
-            }));
+            if (targetStatus === null) {
+                const { error } = await supabase
+                    .from('mbg_logs')
+                    .delete()
+                    .in('student_id', affectedIds)
+                    .eq('date', formattedDate);
+                if (error) throw error;
+            } else {
+                const updates = filteredStudents.map(s => ({
+                    student_id: s.id,
+                    date: formattedDate,
+                    is_received: true,
+                    status: targetStatus
+                }));
 
-            const { error } = await supabase
-                .from('mbg_logs')
-                .upsert(updates, { onConflict: 'student_id, date' });
+                const { error } = await supabase
+                    .from('mbg_logs')
+                    .upsert(updates, { onConflict: 'student_id, date' });
 
-            if (error) throw error;
-
+                if (error) throw error;
+            }
         } catch (err) {
             console.error('Batch update error:', err);
             alert('Gagal update massal.');
@@ -234,42 +245,46 @@ export function StudentList({ selectedDate }: StudentListProps) {
         <>
             <div className="space-y-4 mb-6">
                 {/* Top Controls: Stats & Add Buttons */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                     {/* Stats Bar */}
-                    <div className="grid grid-cols-4 gap-2 sm:gap-4">
-                        <div className="bg-green-50 border border-green-100 rounded-lg p-2 sm:p-3 text-center">
-                            <span className="block text-[10px] sm:text-xs text-green-600 font-medium uppercase">Hadir</span>
-                            <span className="text-lg sm:text-xl font-bold text-green-700">{dailyStats.H}</span>
+                    <div className="grid grid-cols-4 gap-3 sm:gap-4">
+                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-100 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="block text-[10px] sm:text-xs text-emerald-600 font-bold uppercase tracking-wider">Hadir</span>
+                            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-1">{dailyStats.H}</span>
                         </div>
-                        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-2 sm:p-3 text-center">
-                            <span className="block text-[10px] sm:text-xs text-yellow-600 font-medium uppercase">Sakit</span>
-                            <span className="text-lg sm:text-xl font-bold text-yellow-700">{dailyStats.S}</span>
+                        <div className="bg-gradient-to-br from-yellow-50 to-amber-50/50 border border-yellow-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-yellow-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="block text-[10px] sm:text-xs text-yellow-600 font-bold uppercase tracking-wider">Sakit</span>
+                            <span className="text-2xl sm:text-3xl font-extrabold text-yellow-700 mt-1">{dailyStats.S}</span>
                         </div>
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 sm:p-3 text-center">
-                            <span className="block text-[10px] sm:text-xs text-blue-600 font-medium uppercase">Izin</span>
-                            <span className="text-lg sm:text-xl font-bold text-blue-700">{dailyStats.I}</span>
+                        <div className="bg-gradient-to-br from-blue-50 to-sky-50/50 border border-blue-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="block text-[10px] sm:text-xs text-blue-600 font-bold uppercase tracking-wider">Izin</span>
+                            <span className="text-2xl sm:text-3xl font-extrabold text-blue-700 mt-1">{dailyStats.I}</span>
                         </div>
-                        <div className="bg-red-50 border border-red-100 rounded-lg p-2 sm:p-3 text-center">
-                            <span className="block text-[10px] sm:text-xs text-red-600 font-medium uppercase">Alfa</span>
-                            <span className="text-lg sm:text-xl font-bold text-red-700">{dailyStats.A}</span>
+                        <div className="bg-gradient-to-br from-red-50 to-rose-50/50 border border-red-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="block text-[10px] sm:text-xs text-red-600 font-bold uppercase tracking-wider">Alfa</span>
+                            <span className="text-2xl sm:text-3xl font-extrabold text-red-700 mt-1">{dailyStats.A}</span>
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-2">
-                        <div className="text-sm text-gray-500">
-                            Total Siswa: {dailyStats.totalStudents}
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-1">
+                        <div className="text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-full border border-gray-100 shadow-sm">
+                            Total Siswa: <span className="font-bold text-gray-800">{dailyStats.totalStudents}</span>
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
+                        <div className="flex gap-3 w-full sm:w-auto">
                             <button
                                 onClick={() => setIsImportModalOpen(true)}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm active:scale-95"
                             >
-                                <Upload className="w-4 h-4" />
+                                <Upload className="w-4 h-4 text-emerald-600" />
                                 Import
                             </button>
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm shadow-emerald-500/20 active:scale-95"
                             >
                                 <UserPlus className="w-4 h-4" />
                                 Tambah
@@ -279,58 +294,56 @@ export function StudentList({ selectedDate }: StudentListProps) {
                 </div>
 
                 {/* Search & Filter Bar */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Cari nama siswa..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            className="w-full pl-11 pr-4 py-3 text-sm font-medium bg-white/80 border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm placeholder:text-gray-400"
                         />
                     </div>
 
-                    <div className="relative min-w-[140px]">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="relative min-w-[160px] group">
+                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
                         <select
                             value={selectedClass}
                             onChange={(e) => setSelectedClass(e.target.value)}
-                            className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                            className="w-full pl-11 pr-10 py-3 text-sm font-medium bg-white/80 border border-gray-200 rounded-2xl appearance-none focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm cursor-pointer text-gray-700"
                         >
                             <option value="all">Semua Kelas</option>
                             {uniqueClasses.filter(c => c !== 'all').map((cls) => (
                                 <option key={cls} value={cls}>{cls}</option>
                             ))}
                         </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Bulk Actions Bar - Only visible when specific class is selected */}
+            {/* Bulk Actions Bar */}
             {selectedClass !== 'all' && filteredStudents.length > 0 && (
-                <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-2">
-                    <span className="text-xs text-blue-600 font-medium">
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-2xl border border-emerald-100 mb-5 animate-in fade-in slide-in-from-top-2 gap-3 shadow-sm">
+                    <span className="text-sm text-emerald-800 font-semibold tracking-wide">
                         Menampilkan {filteredStudents.length} Siswa (Kelas {selectedClass})
                     </span>
 
-                    <div className="flex gap-2">
-                        {/* Check All Button */}
+                    <div className="flex gap-3 w-full sm:w-auto">
                         <button
                             onClick={() => toggleAll('H')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-bold rounded-md hover:bg-green-100 transition-colors shadow-sm"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border-2 border-emerald-500 text-emerald-700 text-sm font-bold rounded-xl hover:bg-emerald-50 hover:text-emerald-800 transition-all shadow-sm active:scale-95"
                         >
                             <CheckSquare className="w-4 h-4" />
                             Semua Hadir
                         </button>
 
-                        {/* Uncheck All (Optional, good UX to have) */}
                         <button
-                            onClick={() => toggleAll(false)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+                            onClick={() => toggleAll(null)}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm active:scale-95"
                             title="Reset Checklist"
                         >
                             <Square className="w-4 h-4" />
@@ -372,46 +385,58 @@ export function StudentList({ selectedDate }: StudentListProps) {
                     Tidak ada siswa yang cocok dengan pencarian.
                 </div>
             ) : (
-                <div className="space-y-3 pb-20">
+                <div className="space-y-4 pb-24">
                     {filteredStudents.map((student) => (
                         <div
                             key={student.id}
                             className={cn(
-                                "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-3 bg-white rounded-xl border transition-all shadow-sm",
-                                student.status === 'H' ? "border-green-300 bg-green-50/30" :
-                                    student.status === 'S' ? "border-yellow-300 bg-yellow-50/30" :
-                                        student.status === 'I' ? "border-blue-300 bg-blue-50/30" :
-                                            student.status === 'A' ? "border-red-300 bg-red-50/30" :
-                                                "border-transparent hover:border-gray-200"
+                                "flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-3 bg-white/80 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md",
+                                student.status === 'H' ? "border-emerald-300 bg-emerald-50/20" :
+                                    student.status === 'S' ? "border-yellow-300 bg-yellow-50/20" :
+                                        student.status === 'I' ? "border-blue-300 bg-blue-50/20" :
+                                            student.status === 'A' ? "border-red-300 bg-red-50/20" :
+                                                "border-transparent border-[2px] border-b-gray-100 border-r-gray-100 hover:border-gray-200"
                             )}
                         >
-                            <div className="flex items-start gap-4 mb-3 sm:mb-0">
+                            <div className="flex items-start gap-4 mb-4 sm:mb-0">
                                 <div className={cn(
-                                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold min-w-[40px]",
-                                    student.gender === 'P' ? "bg-pink-100 text-pink-600" : "bg-blue-100 text-blue-600"
+                                    "w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black min-w-[48px] shadow-sm",
+                                    student.gender === 'P' ? "bg-gradient-to-br from-pink-100 to-rose-100 text-rose-600 border border-pink-200" : "bg-gradient-to-br from-blue-100 to-sky-100 text-sky-600 border border-blue-200"
                                 )}>
                                     {student.gender || 'L'}
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                                    <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
-                                        <span>{student.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                                <div className="pt-0.5">
+                                    <h3 className="text-[17px] font-bold text-gray-900 tracking-tight leading-none mb-1.5">{student.name}</h3>
+                                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 items-center">
+                                        <span className="font-semibold text-gray-600 px-2 py-0.5 bg-gray-100 rounded-md">Kelas {student.class}</span>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="font-medium">{student.gender === 'P' ? 'Perempuan' : 'Laki-laki'}</span>
+
                                         {student.status && (
-                                            <span className="font-medium px-1.5 py-0.5 rounded bg-gray-100">
-                                                Status: {
-                                                    student.status === 'H' ? 'Hadir' :
-                                                        student.status === 'S' ? 'Sakit' :
-                                                            student.status === 'I' ? 'Izin' : 'Alfa'
-                                                }
-                                            </span>
+                                            <>
+                                                <span className="text-gray-400 hidden sm:inline">•</span>
+                                                <span className={cn(
+                                                    "font-bold px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider",
+                                                    student.status === 'H' ? 'bg-emerald-100 text-emerald-700' :
+                                                        student.status === 'S' ? 'bg-yellow-100 text-yellow-700' :
+                                                            student.status === 'I' ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-red-100 text-red-700'
+                                                )}>
+                                                    Status: {
+                                                        student.status === 'H' ? 'Hadir' :
+                                                            student.status === 'S' ? 'Sakit' :
+                                                                student.status === 'I' ? 'Izin' : 'Alfa'
+                                                    }
+                                                </span>
+                                            </>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-1 sm:gap-2 self-end sm:self-auto">
+                            <div className="flex gap-2 sm:gap-2.5 self-center sm:self-auto w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0">
                                 {[
-                                    { id: 'H', label: 'H', color: 'green', fullLabel: 'Hadir' },
+                                    { id: 'H', label: 'H', color: 'emerald', fullLabel: 'Hadir' },
                                     { id: 'S', label: 'S', color: 'yellow', fullLabel: 'Sakit' },
                                     { id: 'I', label: 'I', color: 'blue', fullLabel: 'Izin' },
                                     { id: 'A', label: 'A', color: 'red', fullLabel: 'Alfa' },
@@ -420,17 +445,18 @@ export function StudentList({ selectedDate }: StudentListProps) {
                                         key={type.id}
                                         onClick={() => updateStatus(student, type.id as any)}
                                         className={cn(
-                                            "w-10 h-10 sm:w-11 sm:h-11 rounded-lg font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center shadow-sm",
+                                            "flex-1 sm:flex-none sm:w-14 sm:h-14 py-3 sm:py-0 rounded-2xl font-black text-base sm:text-xl transition-all duration-300 flex items-center justify-center flex-col gap-0.5 group active:scale-95",
                                             student.status === type.id
-                                                ? type.color === 'green' ? "bg-green-500 border-green-600 text-white scale-105" :
-                                                    type.color === 'yellow' ? "bg-yellow-500 border-yellow-600 text-white scale-105" :
-                                                        type.color === 'blue' ? "bg-blue-500 border-blue-600 text-white scale-105" :
-                                                            "bg-red-500 border-red-600 text-white scale-105"
-                                                : "bg-white border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50"
+                                                ? type.color === 'emerald' ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105" :
+                                                    type.color === 'yellow' ? "bg-gradient-to-br from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30 scale-105" :
+                                                        type.color === 'blue' ? "bg-gradient-to-br from-blue-500 to-sky-500 text-white shadow-lg shadow-blue-500/30 scale-105" :
+                                                            "bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30 scale-105"
+                                                : "bg-white border-2 border-gray-100 text-gray-400 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-700"
                                         )}
                                         title={type.fullLabel}
                                     >
-                                        {type.label}
+                                        <span>{type.label}</span>
+                                        {student.status === type.id && <span className="text-[9px] uppercase tracking-widest leading-none opacity-90 block sm:hidden">{type.fullLabel}</span>}
                                     </button>
                                 ))}
                             </div>
